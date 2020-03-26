@@ -26,7 +26,10 @@ import br.com.desafio.DTO.ResultadoDTO;
 
 public class Main {
 
-	public final static String TOKEN = "9df0bf776a2193c8cc3297a76847c32a83dbb7f6";
+	private final static String TOKEN = "585bc279d597ab2e0a14acad5705bb2a83b7e610";
+	private final static int ASCII_a = 97;
+	private final static int ASCII_z = 122;
+	private final static String URL_CODENATION = "https://api.codenation.dev/v1/challenge/dev-ps";
 
 	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
 		ResultadoDTO resultado = getRequisicaoInicial();
@@ -39,26 +42,27 @@ public class Main {
 		criarAtualizaArquivo(resultado);
 
 		String response = postFile("answer", fileToByte(getFile()));
-		System.out.println(response);
+		System.out.println("===============> RESPOSTA "+ response);
 	}
 
 	private static ResultadoDTO getRequisicaoInicial() {
 		RestTemplate client2 = new RestTemplate();
-		ResponseEntity<ResultadoDTO> exchange2 = 
-		   client2.exchange("https://api.codenation.dev/v1/challenge/dev-ps/generate-data?token=" + TOKEN, HttpMethod.GET, null,ResultadoDTO.class);
+		ResponseEntity<ResultadoDTO> exchange2 = client2.exchange(
+				URL_CODENATION + "/generate-data?token=" + TOKEN, HttpMethod.GET, null,
+				ResultadoDTO.class);
 		return exchange2.getBody();
 	}
 
 	public static String postFile(String filename, byte[] someByteArray) {
-		String serverUrl = "https://api.codenation.dev/v1/challenge/dev-ps/submit-solution?token=" + TOKEN;
-		
+
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
 		MultiValueMap<String, String> fileMap = new LinkedMultiValueMap<>();
-		
-		ContentDisposition contentDisposition = ContentDisposition.builder("form-data").name("answer").filename(filename).build();
+
+		ContentDisposition contentDisposition = ContentDisposition.builder("form-data").name("answer")
+				.filename(filename).build();
 		fileMap.add(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString());
 
 		HttpEntity<byte[]> fileEntity = new HttpEntity<>(someByteArray, fileMap);
@@ -68,7 +72,8 @@ public class Main {
 
 		HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 		try {
-			ResponseEntity<String> response = restTemplate.exchange(serverUrl, HttpMethod.POST, requestEntity,String.class);
+			ResponseEntity<String> response = 
+					restTemplate.exchange(URL_CODENATION + "/submit-solution?token=" + TOKEN, HttpMethod.POST, requestEntity,String.class);
 			return response.getBody();
 		} catch (HttpClientErrorException e) {
 			e.printStackTrace();
@@ -78,9 +83,11 @@ public class Main {
 
 	private static void criarAtualizaArquivo(ResultadoDTO dto) throws IOException {
 		File file = new File("d://answer.json");
-		
-		if (file.createNewFile()) System.out.println("Arquivo Criado");
-		else  System.out.println("Arquivo ja existe (Será alterado)");
+
+		if (file.createNewFile())
+			System.out.println("Arquivo Criado");
+		else
+			System.out.println("Arquivo ja existe (Será alterado)");
 
 		FileWriter writer = new FileWriter(file);
 		writer.write(converetObjetoEmString(dto));
@@ -103,14 +110,17 @@ public class Main {
 		char[] letras = string.toCharArray();
 		StringBuilder frase = new StringBuilder();
 
-		for (char l : letras) {
-			String letra = String.valueOf(l);
+		for (char let : letras) {
+			String letra = String.valueOf(let);
 			if (letra.contains(".") || letra.contains(",") || letra.contains(" ") || NumberUtils.isDigits(letra)) {
-				frase.append(l);
-			} else if (letra.contains("a")) {
-				frase.append((char) (((int) l) + 26 - numeroCasasDecimais));
+				frase.append(let);
+			} else if ((int) let - numeroCasasDecimais == ASCII_a) {
+				frase.append((char) ASCII_a);
+			} else if ((int) let - numeroCasasDecimais < ASCII_a) { 
+				Integer dif = (int) let - ASCII_a;
+				frase.append((char) ((ASCII_z+1) - (numeroCasasDecimais -dif)));
 			} else {
-				frase.append((char) (((int) l) - numeroCasasDecimais));
+				frase.append((char) (((int) let) - numeroCasasDecimais));
 			}
 		}
 
@@ -127,7 +137,7 @@ public class Main {
 		}
 		return sb.toString();
 	}
-	
+
 	private static byte[] fileToByte(File file) throws IOException {
 		return Files.readAllBytes(file.toPath());
 	}
